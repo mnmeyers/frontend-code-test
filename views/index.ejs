@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Recipes</title>
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/font-awesome.min.css">
+    <link rel="stylesheet" href="css/style.css">
+
+</head>
+<script src="js/angular/angular.js"></script>
+<body>
+<div ng-app="myApp" ng-controller="recipesCtrl">
+
+
+<div class="container">
+    <h2>Recipes</h2>
+    <input ng-model="query" class="search" placeholder='Search by Ingredient' />
+    <p><i class="fa fa-check"></i> a recipe to view the ingredients</p>
+    <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>Recipe</th>
+                    <th>Cuisine</th>
+                    <th>Cooking Time</th>
+                    <th ng-show="checked">Ingredients</th>
+
+                </tr>
+            </thead>
+            <tbody>
+                <tr ng-repeat="recipe in recipes | filter:query">
+                    <td><input type="checkbox" name="view" ng-model="checked" aria-label="Toggle ngHide" for="ingredients"></td>
+                    <td>{{recipe.name}}</td>
+                    <!--<td><ul><li ng-repeat="ingredient in ingredients" >{{ingredient.ingredients}}</li></ul></td>-->
+                    <td>{{recipe.type}}</td>
+                    <td>{{recipe.cook_time + ' min'}}</td>
+                    <td id="ingredients" class="check-element animate-show" ng-show="checked">{{arrayToString(recipe.ingredients)}}</td>
+
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+<script>
+
+    var app = angular.module('myApp', []);
+    app.controller('recipesCtrl', function($scope, $http) {
+        $http.get("js/recipes.json")
+                .success(function(data) {
+                    $scope.recipes = data;
+//                    $scope.ingredients = data.ingredients;
+                    $scope.arrayToString = function(string){
+                        return string.sort().join(", ");
+                    };
+                });
+
+    });
+</script>
+
+</body>
+<script src="js/jquery.js"></script>
+<script src="js/bootstrap.min.js"></script>
+</html>
