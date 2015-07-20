@@ -17,29 +17,31 @@
     <h2>Recipes</h2>
     <input ng-model="query" class="search" placeholder='Search by Ingredient' />
     <p><i class="fa fa-check"></i> a recipe to view the ingredients</p>
+    <form id="myForm" name="myForm">
     <table class="table table-striped">
             <thead>
                 <tr>
-                    <th></th>
-                    <th>Recipe</th>
-                    <th>Cuisine</th>
-                    <th>Cooking Time</th>
-                    <th ng-show="checked">Ingredients</th>
+                    <th><input type="checkbox" id="checkAll" ng-model="checked" aria-label="Toggle ngHide"></th>
+                    <th><i class="fa fa-list"></i> Recipe</th>
+                    <th><i class="fa fa-cutlery"></i> Cuisine</th>
+                    <th><i class="fa fa-clock-o"></i> Cooking Time</th>
+                    <th><i class="fa fa-shopping-cart"></i> Ingredients</th>
 
                 </tr>
             </thead>
             <tbody>
                 <tr ng-repeat="recipe in recipes | filter:query">
-                    <td><input type="checkbox" name="view" ng-model="checked" aria-label="Toggle ngHide" for="ingredients"></td>
+                    <td><input type="checkbox" name="checkboxes" ng-model="checked" id="{{ 'object-' + $index }}" aria-label="Toggle ngHide"></td>
                     <td>{{recipe.name}}</td>
                     <!--<td><ul><li ng-repeat="ingredient in ingredients" >{{ingredient.ingredients}}</li></ul></td>-->
                     <td>{{recipe.type}}</td>
                     <td>{{recipe.cook_time + ' min'}}</td>
-                    <td id="ingredients" class="check-element animate-show" ng-show="checked">{{arrayToString(recipe.ingredients)}}</td>
+                    <td class="check-element animate-show" ng-show="checked" id="ingredients">{{arrayToString(recipe.ingredients)}}</td>
 
                 </tr>
             </tbody>
         </table>
+    </form>
     </div>
 </div>
 <script>
@@ -49,7 +51,6 @@
         $http.get("js/recipes.json")
                 .success(function(data) {
                     $scope.recipes = data;
-//                    $scope.ingredients = data.ingredients;
                     $scope.arrayToString = function(string){
                         return string.sort().join(", ");
                     };
@@ -61,4 +62,25 @@
 </body>
 <script src="js/jquery.js"></script>
 <script src="js/bootstrap.min.js"></script>
+
+<script>
+    $("#checkAll").change(function () {
+        $("input:checkbox").prop('checked', $(this).prop("checked"));
+    });
+$(document).ready(function () {
+    if (localStorage) {
+
+        if (localStorage.checkboxes === "checked") {
+            $("input:checkbox").attr("checked", "checked");
+        }
+
+        $("input[type=checkbox]").change(function(){
+            $this = $(this);
+            localStorage[$this.attr("name")] = $this.attr("checked");
+        });
+
+    }
+
+});
+</script>
 </html>
