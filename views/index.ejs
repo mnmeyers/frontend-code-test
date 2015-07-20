@@ -6,81 +6,86 @@
     <link rel="stylesheet" href="css/bootstrap.min.css">
     <link rel="stylesheet" href="css/font-awesome.min.css">
     <link rel="stylesheet" href="css/style.css">
-
+    <script src="js/angular/angular.js"></script>
 </head>
-<script src="js/angular/angular.js"></script>
 <body>
 <div ng-app="myApp" ng-controller="recipesCtrl">
 
-
-<div class="container">
-    <h2>Recipes</h2>
-    <input ng-model="query" class="search" placeholder='Search by Ingredient' />
-    <p><i class="fa fa-check"></i> a recipe to view the ingredients</p>
-    <form id="myForm" name="myForm">
-    <table class="table table-striped">
+    <div class="container">
+        <h2>Recipes</h2>
+        <input ng-model="query" class="search" placeholder='Search by Ingredient' />
+        <p><i class="fa fa-check"></i> a recipe to view the ingredients</p>
+        <table class="table table-striped">
             <thead>
-                <tr>
-                    <th><input type="checkbox" id="checkAll" ng-model="checked" aria-label="Toggle ngHide"></th>
-                    <th><i class="fa fa-list"></i> Recipe</th>
-                    <th><i class="fa fa-cutlery"></i> Cuisine</th>
-                    <th><i class="fa fa-clock-o"></i> Cooking Time</th>
-                    <th><i class="fa fa-shopping-cart"></i> Ingredients</th>
+            <tr>
+                <th></th>
+                <th><i class="fa fa-list"></i> Recipe</th>
+                <th><i class="fa fa-cutlery"></i> Cuisine</th>
+                <th><i class="fa fa-clock-o"></i> Cooking Time</th>
+                <th><i class="fa fa-shopping-cart"></i> Ingredients</th>
 
-                </tr>
+            </tr>
             </thead>
             <tbody>
-                <tr ng-repeat="recipe in recipes | filter:query">
-                    <td><input type="checkbox" name="checkboxes" ng-model="checked" id="{{ 'object-' + $index }}" aria-label="Toggle ngHide"></td>
-                    <td>{{recipe.name}}</td>
-                    <!--<td><ul><li ng-repeat="ingredient in ingredients" >{{ingredient.ingredients}}</li></ul></td>-->
-                    <td>{{recipe.type}}</td>
-                    <td>{{recipe.cook_time + ' min'}}</td>
-                    <td class="check-element animate-show" ng-show="checked" id="ingredients">{{arrayToString(recipe.ingredients)}}</td>
+            <tr ng-repeat="recipe in recipes | filter:query">
+                <td><input type="checkbox" name="checkboxes" ng-change="recipeChanged(recipe)" ng-model="recipe.checked" id="{{ 'object-' + $index }}" aria-label="Toggle ngHide"></td>
+                <td>{{recipe.name}}</td>
+                <td>{{recipe.type}}</td>
+                <td>{{recipe.cook_time + ' min'}}</td>
+                <td class="check-element animate-show" ng-show="recipe.checked" id="ingredients">{{arrayToString(recipe.ingredients)}}</td>
 
-                </tr>
+            </tr>
             </tbody>
         </table>
-    </form>
     </div>
 </div>
 <script>
-
     var app = angular.module('myApp', []);
     app.controller('recipesCtrl', function($scope, $http) {
+        var STORAGE_KEY = 'recipes';
+        // save it locally
+        var savedCheckedRecipes = function(){
+            if (localStorage) {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(savedRecipes));
+            }
+        };
+        var getSavedRecipes = function(){
+            if (localStorage) {
+                var saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+                if(saved && typeof saved == 'object'){
+                    return saved;
+                }
+            }
+            return {};
+        };
+        // save a recipe
+        $scope.recipeChanged = function(recipe){
+            if(recipe.checked){
+                savedRecipes[recipe.key] = true;
+            } else {
+                if(savedRecipes[recipe.key]){
+                    delete savedRecipes[recipe.key];
+                }
+            }
+            savedCheckedRecipes();
+        };
+        var savedRecipes = getSavedRecipes();
         $http.get("js/recipes.json")
                 .success(function(data) {
-                    $scope.recipes = data;
+                    $scope.recipes = [];
+                    for(item in data ){
+                        data[item].key = data[item].name + '_' + data[item].type;
+                        // check if the recipe was saved
+                        if(getSavedRecipes()){
+                            data[item].checked = getSavedRecipes()[data[item].key];
+                        }
+                        $scope.recipes.push(data[item]);
+                    }
                     $scope.arrayToString = function(string){
-                        return string.sort().join(", ");
+                        return string.sort().join(', ');
                     };
                 });
-
     });
 </script>
-
 </body>
-<script src="js/jquery.js"></script>
-<script src="js/bootstrap.min.js"></script>
-
-<script>
-    $("#checkAll").change(function () {
-        $("input:checkbox").prop('checked', $(this).prop("checked"));
-    });
-$(document).ready(function () {
-    if (localStorage) {
-
-        if (localStorage.checkboxes === "checked") {
-            $("input:checkbox").attr("checked", "checked");
-        }
-
-        $("input[type=checkbox]").change(function(){
-            $this = $(this);
-            localStorage[$this.attr("name")] = $this.attr("checked");
-        });
-
-    }
-
-});
-</script>
 </html>
