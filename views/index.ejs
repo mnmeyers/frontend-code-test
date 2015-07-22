@@ -22,70 +22,125 @@
                 <th><i class="fa fa-list"></i> Recipe</th>
                 <th><i class="fa fa-cutlery"></i> Cuisine</th>
                 <th><i class="fa fa-clock-o"></i> Cooking Time</th>
-                <th><i class="fa fa-shopping-cart"></i> Ingredients</th>
-
             </tr>
             </thead>
             <tbody>
             <tr ng-repeat="recipe in recipes | filter:query">
-                <td><input type="checkbox" name="checkboxes" ng-change="recipeChanged(recipe)" ng-model="recipe.checked" id="{{ 'object-' + $index }}" aria-label="Toggle ngHide"></td>
+                <td><input type="checkbox" name="checkboxes" ng-change="recipeChanged(recipe)" ng-model="recipe.checkedState" id="{{ 'object-' + $index }}" aria-label="Toggle ngHide"></td>
                 <td>{{recipe.name}}</td>
                 <td>{{recipe.type}}</td>
                 <td>{{recipe.cook_time + ' min'}}</td>
-                <td class="check-element animate-show" ng-show="recipe.checked" id="ingredients">{{arrayToString(recipe.ingredients)}}</td>
-
             </tr>
             </tbody>
         </table>
+        <h4 class="check-element animate-show" ng-show="checkedRecipes.length"><i class="fa fa-shopping-cart"></i> Ingredients</h4>
+        <ul>
+            <li ng-repeat="ingredient in ingredients" class="check-element animate-show">{{ingredient}}</li>
+        </ul>
+
     </div>
 </div>
+<script src="js/lodash.min.js"></script>
 <script>
     var app = angular.module('myApp', []);
     app.controller('recipesCtrl', function($scope, $http) {
-        var STORAGE_KEY = 'recipes';
-        // save it locally
-        var savedCheckedRecipes = function(){
-            if (localStorage) {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(savedRecipes));
-            }
-        };
-        var getSavedRecipes = function(){
-            if (localStorage) {
-                var saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-                if(saved && typeof saved == 'object'){
-                    return saved;
+        $scope.checkedRecipes = [];
+
+        $http.get("js/recipes.json").success(function(data) {
+            var savedRecipes = {};
+            data.forEach(function(d){
+                savedRecipes[idForRecipe(d)] = getSavedRecipe(d);
+            });
+
+            var processed_recipes = data.map(function(item){
+                // 1) add a deterministic unique key
+                // 2) restore its checked state from localStorage
+                var processed_item = {};
+                processed_item.name = item.name;
+                processed_item.type = item.type;
+                processed_item.cook_time = item.cook_time;
+                processed_item.ingredients = item.ingredients;
+                processed_item.id = idForRecipe(item);
+                if(savedRecipes[processed_item.id]){
+                    var saved_item = savedRecipes[processed_item.id];
+                    processed_item.checkedState = saved_item.checkedState;
+
+                } else {
+                    processed_item.checkedState = false;
+
                 }
-            }
-            return {};
-        };
-        // save a recipe
+                return processed_item;
+            });
+            $scope.recipes = processed_recipes;
+
+            processed_recipes.forEach(function(r){
+                if(r.checkedState === true) {
+                    $scope.checkedRecipes.push(r);
+                }
+            });
+            setIngredients(processed_recipes);
+        });
+
         $scope.recipeChanged = function(recipe){
-            if(recipe.checked){
-                savedRecipes[recipe.key] = true;
+            //if recipe changed into unchecked state, attempt to remove it from checkedRecipes[]. && if it's in array, don't attempt to remove.
+            //else if it became checked add to checkedRecipes arr unless it's already there
+            setLocalStorageRecipe(recipe);
+            if (recipe.checkedState === false) {
+                removeRecipeFromCheckedRecipes(recipe);
             } else {
-                if(savedRecipes[recipe.key]){
-                    delete savedRecipes[recipe.key];
-                }
+                addRecipeToCheckedRecipes(recipe);
             }
-            savedCheckedRecipes();
+            setIngredients($scope.checkedRecipes);
         };
-        var savedRecipes = getSavedRecipes();
-        $http.get("js/recipes.json")
-                .success(function(data) {
-                    $scope.recipes = [];
-                    for(item in data ){
-                        data[item].key = data[item].name + '_' + data[item].type;
-                        // check if the recipe was saved
-                        if(getSavedRecipes()){
-                            data[item].checked = getSavedRecipes()[data[item].key];
-                        }
-                        $scope.recipes.push(data[item]);
-                    }
-                    $scope.arrayToString = function(string){
-                        return string.sort().join(', ');
-                    };
-                });
+
+        function ingredientsForRecipes(recipes){
+            var ingredients = [];
+            recipes.forEach(function(recipe){
+                if(recipe.checkedState === true){
+                    recipe.ingredients.forEach(function(ingredient){
+                        ingredients.push(ingredient);
+                    });
+                }
+            });
+            return _.uniq(ingredients, function(ingredient){
+                return ingredient;
+            }).sort();
+        }
+
+        function getSavedRecipe(recipe) {
+            return JSON.parse(localStorage.getItem(idForRecipe(recipe)));
+        }
+
+        function hasRecipe(recipe){
+            var recipes_with_this_id = _.filter($scope.checkedRecipes, function(r){
+                return r.id === recipe.id;
+            });
+            return recipes_with_this_id.length > 0;
+        }
+
+        function addRecipeToCheckedRecipes(recipe){
+            if (hasRecipe(recipe)) { return; }
+            $scope.checkedRecipes.push(recipe);
+        }
+
+        function removeRecipeFromCheckedRecipes(recipe){
+            $scope.checkedRecipes = _.reject($scope.checkedRecipes, function(r){
+                return r.id === recipe.id;
+            });
+        }
+        function setLocalStorageRecipe(recipe){
+            localStorage.setItem(recipe.id, JSON.stringify(recipe));
+        }
+
+        function setIngredients (recipes){
+            $scope.ingredients = ingredientsForRecipes(recipes);
+        }
+
+        function idForRecipe(recipe){
+            return recipe.name + '_' + recipe.type;
+        }
     });
 </script>
+
 </body>
 </html>
